@@ -77,7 +77,7 @@ node -v
 ```
 
 You should see a “successful” message like this one, simply showing a version number (e.g. v24.11.1):  
-![][https://44580685.fs1.hubspotusercontent-na1.net/hubfs/44580685/README/image6.png]
+![](https://44580685.fs1.hubspotusercontent-na1.net/hubfs/44580685/README/image6.png)
 
 ### 1.2.1 If you get an error like command not found:
 
