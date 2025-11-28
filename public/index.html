@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Breezy Admin Panel - HubSpot Integration POC</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+
+    h1, h2, h3 {
+      margin-bottom: 10px;
+    }
+
+    .layout {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      background: #ffffff;
+      padding: 16px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      flex: 1 1 350px;
+      max-width: 650px;
+    }
+
+    .status {
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+    }
+
+    .status.loading {
+      color: #555;
+    }
+
+    .status.error {
+      color: #b00020;
+    }
+
+    .status.success {
+      color: #0f7b0f;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid #dddddd;
+      padding: 8px;
+      text-align: left;
+      font-size: 0.9rem;
+      vertical-align: top;
+    }
+
+    th {
+      background-color: #f0f0f0;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    label {
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+
+    input, select {
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #cccccc;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .input-error {
+      border-color: #b00020;
+      background-color: #ffecec;
+    }
+
+    .input-success {
+      border-color: #0f7b0f;
+      background-color: #f1fff1;
+    }
+
+    .field-error-text {
+      font-size: 0.8rem;
+      color: #b00020;
+    }
+
+    button {
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: none;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background-color: #0052cc;
+      color: #ffffff;
+    }
+
+    button.primary:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    small {
+      font-size: 0.8rem;
+      color: #555;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #555;
+      margin-top: -4px;
+      margin-bottom: 6px;
+    }
+
+    .line-items-box {
+      border: 1px dashed #ccc;
+      border-radius: 6px;
+      padding: 8px;
+      margin-top: 4px;
+      background-color: #fafafa;
+      font-size: 0.85rem;
+    }
+
+    .line-items-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Breezy Admin Panel – HubSpot Integration POC</h1>
+
+  <!-- Two-column layout:
+       LEFT: Contacts (top) + Deals (bottom)
+       RIGHT: Unified form -->
+  <div class="layout" style="align-items: flex-start;">
+
+    <!-- LEFT COLUMN -->
+    <div style="flex: 1 1 45%; min-width: 350px; display: flex; flex-direction: column;">
+      <!-- Contacts -->
+      <div class="card">
+        <h2>Contacts in HubSpot</h2>
+        <div id="contacts-status" class="status loading">
+          Loading contacts from HubSpot...
+        </div>
+        <table id="contacts-table">
+          <thead>
+            <tr>
+              <th>First name</th>
+              <th>Last name</th>
+              <th>Email</th>
+              <th>Job title</th>
+              <th>Company</th>
+              <th>Deals (subscriptions)</th>
+            </tr>
+          </thead>
+          <tbody id="contacts-tbody">
+            <!-- Rows inserted by JS -->
+          </tbody>
+        </table>
+        <div class="status">
+          Showing up to 15 contacts on page load. Deals are fetched automatically per contact.
+        </div>
+      </div>
+
+      <!-- Deals for selected contact -->
+      <div class="card">
+        <h2>Subscription Deals (Breezy Premium)</h2>
+        <p>
+          Select any contact to inspect their subscription deals and values from HubSpot.
+        </p>
+
+        <div class="field-group">
+          <label for="deal-contact-select">Select contact *</label>
+          <select id="deal-contact-select">
+            <option value="">-- Select a contact --</option>
+          </select>
+          <div class="subtitle">
+            Contacts are loaded from HubSpot. Choose one to view existing deals.
+          </div>
+        </div>
+
+        <div id="deals-status" class="status"></div>
+
+        <h3>Deals for selected contact</h3>
+        <table id="deals-table">
+          <thead>
+            <tr>
+              <th>Deal name</th>
+              <th>Amount</th>
+              <th>Stage</th>
+            </tr>
+          </thead>
+          <tbody id="deals-tbody">
+            <!-- Deals rows go here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Unified form -->
+    <div style="flex: 1 1 45%; min-width: 350px;">
+      <div class="card">
+        <h2>Create Customer + Subscription</h2>
+        <p>
+          Use this form to create a new Breezy customer and immediately attach a subscription deal
+          (including optional thermostat hardware) in HubSpot.
+        </p>
+
+        <div id="unified-form-status" class="status"></div>
+
+        <form id="unified-form">
+          <!-- Customer details -->
+          <h3>Customer details</h3>
+
+          <div class="field-group">
+            <label for="u-firstname">First name *</label>
+            <input type="text" id="u-firstname" name="u-firstname" required />
+          </div>
+
+          <div class="field-group">
+            <label for="u-lastname">Last name *</label>
+            <input type="text" id="u-lastname" name="u-lastname" required />
+          </div>
+
+          <div class="field-group">
+            <label for="u-email">Email *</label>
+            <input type="text" id="u-email" name="u-email" required />
+            <div id="u-email-error-text" class="field-error-text"></div>
+          </div>
+
+          <div class="field-group">
+            <label for="u-phone">Phone (optional)</label>
+            <input type="text" id="u-phone" name="u-phone" />
+          </div>
+
+          <div class="field-group">
+            <label for="u-address">Address (optional)</label>
+            <input type="text" id="u-address" name="u-address" />
+          </div>
+
+          <hr />
+
+          <!-- Subscription details -->
+          <h3>Subscription details</h3>
+
+          <div class="field-group">
+            <label for="subscription-plan">Subscription type *</label>
+            <select id="subscription-plan" name="subscription-plan" required>
+              <option value="free">Free trial</option>
+              <option value="monthly">Monthly</option>
+              <option value="annual" selected>Annual</option>
+            </select>
+            <div class="subtitle">
+              This drives the subscription price, contract value, and deal stage.
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label>Subscription pricing</label>
+            <div class="line-items-box">
+              <div class="line-items-row">
+                <span>Subscription amount (12-month value)</span>
+                <span>$<span id="subscription-amount-display">99.00</span></span>
+              </div>
+              <div class="totals-row">
+                <span>Subscription subtotal</span>
+                <span>$<span id="subscription-subtotal-display">99.00</span></span>
+              </div>
+            </div>
+            <div class="subtitle">
+              For monthly plans, Breezy uses a 12-month contract value (9.99 × 12).
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label>Hardware line item (Thermostat)</label>
+            <div class="line-items-box">
+              <div class="line-items-row">
+                <span>
+                  <input
+                    type="checkbox"
+                    id="include-thermostat"
+                    checked
+                  />
+                  <label for="include-thermostat" style="font-weight: normal;">
+                    Breezy Smart Thermostat (one-time)
+                  </label>
+                </span>
+                <span>$<span id="thermostat-price-display">299</span></span>
+              </div>
+              <div class="line-items-row">
+                <span>Quantity</span>
+                <span>
+                  <input
+                    type="number"
+                    id="thermostat-quantity"
+                    min="1"
+                    value="1"
+                    style="width: 60px; text-align: right;"
+                  />
+                </span>
+              </div>
+              <div class="totals-row">
+                <span>Hardware subtotal</span>
+                <span>$<span id="thermostat-subtotal-display">299</span></span>
+              </div>
+              <div class="totals-row">
+                <span><em>Subscription + hardware total (saved as deal amount)</em></span>
+                <span>$<span id="deal-total-display">398.00</span></span>
+              </div>
+            </div>
+            <div class="subtitle">
+              Simulates a HubSpot line item for thermostat hardware at $299 each. The deal amount stored
+              in HubSpot uses this combined total.
+            </div>
+          </div>
+
+          <button type="submit" class="primary" id="unified-form-button">
+            Create Contact + Subscription Deal in HubSpot
+          </button>
+          <div>
+            <small>* Required fields</small>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global cache of contacts
+    let contactsCache = [];
+
+    // Constants
+    const THERMOSTAT_UNIT_PRICE = 299;
+    // Subscription prices (12-month value for monthly)
+    const SUBSCRIPTION_PRICES = {
+      free: 0,
+      monthly: 9.99 * 12, // 12-month value
+      annual: 99
+    };
+
+    function formatDealStage(stage) {
+      switch (stage) {
+        case 'appointmentscheduled':
+          return 'Trial started';
+        case 'qualifiedtobuy':
+          return 'Active trial user';
+        case 'closedwon':
+          return 'Converted to paid subscription';
+        case 'closedlost':
+          return 'Trial ended without conversion';
+        default:
+          return stage || '(unknown stage)';
+      }
+    }
+
+    function getSelectedPlan() {
+      const planSelect = document.getElementById('subscription-plan');
+      return planSelect.value || 'free';
+    }
+
+    function getPlanLabel(plan) {
+      switch (plan) {
+        case 'free':
+          return 'Free';
+        case 'monthly':
+          return 'Monthly';
+        case 'annual':
+          return 'Annual';
+        default:
+          return plan;
+      }
+    }
+
+    // ---- Contacts loading ----
+    async function loadContacts() {
+      const statusEl = document.getElementById('contacts-status');
+      const tbody = document.getElementById('contacts-tbody');
+      const contactSelect = document.getElementById('deal-contact-select');
+
+      statusEl.textContent = 'Loading contacts from HubSpot...';
+      statusEl.className = 'status loading';
+
+      try {
+        const response = await fetch('/api/contacts');
+
+        if (!response.ok) {
+          throw new Error('Server returned status ' + response.status);
+        }
+
+        const data = await response.json();
+        const results = Array.isArray(data.results) ? data.results : [];
+        contactsCache = results;
+
+        const contactsToShow = results.slice(0, 15);
+
+        tbody.innerHTML = '';
+        contactSelect.innerHTML = '<option value="">-- Select a contact --</option>';
+
+        if (contactsToShow.length === 0) {
+          statusEl.textContent = 'No contacts found in HubSpot.';
+          statusEl.className = 'status';
+          return;
+        }
+
+        contactsToShow.forEach(contact => {
+          const props = contact.properties || {};
+          const tr = document.createElement('tr');
+
+          function safe(v) { return v || ''; }
+
+          const dealsCellId = `contact-deals-${contact.id}`;
+
+          tr.innerHTML = `
+            <td>${safe(props.firstname)}</td>
+            <td>${safe(props.lastname)}</td>
+            <td>${safe(props.email)}</td>
+            <td>${safe(props.jobtitle)}</td>
+            <td>${safe(props.company)}</td>
+            <td id="${dealsCellId}">Loading deals...</td>
+          `;
+          tbody.appendChild(tr);
+
+          // Fetch deals summary for this contact
+          loadDealsSummaryForContact(contact.id, dealsCellId);
+        });
+
+        // Populate selector with all contacts
+        results.forEach(contact => {
+          const props = contact.properties || {};
+          const opt = document.createElement('option');
+          const name = [props.firstname, props.lastname].filter(Boolean).join(' ');
+          const label = name
+            ? `${name} – ${props.email || 'no email'}`
+            : props.email || `Contact ${contact.id}`;
+          opt.value = contact.id;
+          opt.textContent = label;
+          contactSelect.appendChild(opt);
+        });
+
+        statusEl.textContent = `Loaded ${contactsToShow.length} contact(s) from HubSpot (up to 15 shown).`;
+        statusEl.className = 'status success';
+      } catch (error) {
+        console.error('Error loading contacts:', error);
+        statusEl.textContent = 'Error loading contacts. Please check the server or your HubSpot token.';
+        statusEl.className = 'status error';
+      }
+    }
+
+    async function loadDealsSummaryForContact(contactId, cellId) {
+      const cell = document.getElementById(cellId);
+      if (!cell) return;
+
+      try {
+        const response = await fetch(`/api/contacts/${contactId}/deals`);
+        if (!response.ok) {
+          throw new Error('Server returned status ' + response.status);
+        }
+
+        const data = await response.json();
+        const results = Array.isArray(data.results) ? data.results : [];
+
+        if (results.length === 0) {
+          cell.textContent = 'No deals';
+          return;
+        }
+
+        const summary = results.map(deal => {
+          const props = deal.properties || {};
+          const name = props.dealname || 'Unnamed deal';
+          const amount = props.amount ? `$${props.amount}` : '$0';
+          const stage = formatDealStage(props.dealstage);
+          return `${name} (${amount}, ${stage})`;
+        }).join('; ');
+
+        cell.textContent = summary;
+      } catch (err) {
+        console.error(`Error loading deals for contact ${contactId}:`, err);
+        cell.textContent = 'Error loading deals';
+      }
+    }
+
+    // ---- Email validation for unified form ----
+    function validateEmailFieldUnified() {
+      const emailInput = document.getElementById('u-email');
+      const emailErrorText = document.getElementById('u-email-error-text');
+      const email = emailInput.value.trim();
+
+      if (!email) {
+        emailInput.classList.remove('input-error', 'input-success');
+        emailErrorText.textContent = '';
+        return false;
+      }
+
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!emailPattern.test(email)) {
+        emailInput.classList.remove('input-success');
+        emailInput.classList.add('input-error');
+        emailErrorText.textContent = 'Please enter a valid email address (e.g. name@example.com).';
+        return false;
+      }
+
+      emailInput.classList.remove('input-error');
+      emailInput.classList.add('input-success');
+      emailErrorText.textContent = '';
+      return true;
+    }
+
+    // ---- Deal totals (subscription + hardware) ----
+    function calculateDealTotals() {
+      const plan = getSelectedPlan();
+      const basePrice = SUBSCRIPTION_PRICES[plan] ?? 0;
+
+      const includeThermostat = document.getElementById('include-thermostat');
+      const quantityInput = document.getElementById('thermostat-quantity');
+      const quantity = Math.max(1, parseInt(quantityInput.value || '1', 10) || 1);
+
+      let hardwareSubtotal = 0;
+      if (includeThermostat.checked) {
+        hardwareSubtotal = THERMOSTAT_UNIT_PRICE * quantity;
+      }
+
+      const subscriptionAmount = basePrice;
+      const total = subscriptionAmount + hardwareSubtotal;
+      return { subscriptionAmount, hardwareSubtotal, total };
+    }
+
+    function recalculateDealTotals() {
+      const thermostatPriceDisplay = document.getElementById('thermostat-price-display');
+      const thermostatSubtotalDisplay = document.getElementById('thermostat-subtotal-display');
+      const dealTotalDisplay = document.getElementById('deal-total-display');
+      const subscriptionAmountDisplay = document.getElementById('subscription-amount-display');
+      const subscriptionSubtotalDisplay = document.getElementById('subscription-subtotal-display');
+
+      thermostatPriceDisplay.textContent = THERMOSTAT_UNIT_PRICE.toFixed(0);
+
+      const { subscriptionAmount, hardwareSubtotal, total } = calculateDealTotals();
+
+      subscriptionAmountDisplay.textContent = subscriptionAmount.toFixed(2);
+      subscriptionSubtotalDisplay.textContent = subscriptionAmount.toFixed(2);
+      thermostatSubtotalDisplay.textContent = hardwareSubtotal.toFixed(0);
+      dealTotalDisplay.textContent = total.toFixed(2);
+    }
+
+    // ---- Load deals for selected contact (left-bottom card) ----
+    async function loadDealsForContact(contactId) {
+      const dealsStatusEl = document.getElementById('deals-status');
+      const dealsTbody = document.getElementById('deals-tbody');
+
+      if (!contactId) {
+        dealsStatusEl.textContent = 'Please select a contact to view deals.';
+        dealsStatusEl.className = 'status';
+        dealsTbody.innerHTML = '';
+        return;
+      }
+
+      dealsStatusEl.textContent = 'Loading deals for selected contact...';
+      dealsStatusEl.className = 'status loading';
+      dealsTbody.innerHTML = '';
+
+      try {
+        const response = await fetch(`/api/contacts/${contactId}/deals`);
+        if (!response.ok) {
+          throw new Error('Server returned status ' + response.status);
+        }
+
+        const data = await response.json();
+        const results = Array.isArray(data.results) ? data.results : [];
+
+        if (results.length === 0) {
+          dealsStatusEl.textContent = 'No deals found for this contact.';
+          dealsStatusEl.className = 'status';
+          return;
+        }
+
+        results.forEach(deal => {
+          const props = deal.properties || {};
+          const tr = document.createElement('tr');
+          function safe(v) { return v || ''; }
+
+          tr.innerHTML = `
+            <td>${safe(props.dealname)}</td>
+            <td>${safe(props.amount)}</td>
+            <td>${formatDealStage(props.dealstage)}</td>
+          `;
+          dealsTbody.appendChild(tr);
+        });
+
+        dealsStatusEl.textContent = `Loaded ${results.length} deal(s) for this contact.`;
+        dealsStatusEl.className = 'status success';
+      } catch (err) {
+        console.error('Error loading deals:', err);
+        dealsStatusEl.textContent = 'Error loading deals. Please check the server.';
+        dealsStatusEl.className = 'status error';
+      }
+    }
+
+    // ---- Unified form: create contact + deal ----
+    async function handleCreateCustomerAndDeal(event) {
+      event.preventDefault();
+
+      const statusEl = document.getElementById('unified-form-status');
+      const submitButton = document.getElementById('unified-form-button');
+
+      statusEl.textContent = '';
+      statusEl.className = 'status';
+
+      const firstname = document.getElementById('u-firstname').value.trim();
+      const lastname = document.getElementById('u-lastname').value.trim();
+      const emailInput = document.getElementById('u-email');
+      const email = emailInput.value.trim();
+      const phone = document.getElementById('u-phone').value.trim();
+      const address = document.getElementById('u-address').value.trim();
+
+      if (!firstname || !lastname || !email) {
+        statusEl.textContent = 'Please fill in first name, last name, and email.';
+        statusEl.className = 'status error';
+        return;
+      }
+
+      const isEmailValid = validateEmailFieldUnified();
+      if (!isEmailValid) {
+        statusEl.textContent = 'Please fix the email address before submitting.';
+        statusEl.className = 'status error';
+        return;
+      }
+
+      submitButton.disabled = true;
+      statusEl.textContent = 'Creating contact in HubSpot...';
+      statusEl.className = 'status loading';
+
+      const contactPayload = {
+        properties: {
+          firstname,
+          lastname,
+          email,
+          ...(phone && { phone }),
+          ...(address && { address })
+        }
+      };
+
+      try {
+        // 1) Create contact
+        const contactRes = await fetch('/api/contacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(contactPayload)
+        });
+
+        if (!contactRes.ok) {
+          const errorBody = await contactRes.json().catch(() => ({}));
+          console.error('Error creating contact:', errorBody);
+          throw new Error('Contact creation failed with status ' + contactRes.status);
+        }
+
+        const createdContact = await contactRes.json();
+        const contactId = createdContact.id;
+
+        // 2) Compute totals for deal
+        const plan = getSelectedPlan();
+        const { total } = calculateDealTotals();
+
+        if (total <= 0) {
+          statusEl.textContent = 'Total amount must be greater than zero.';
+          statusEl.className = 'status error';
+          submitButton.disabled = false;
+          return;
+        }
+
+        // 3) Determine dealstage
+        const dealstage = (plan === 'free') ? 'appointmentscheduled' : 'closedwon';
+        const planLabel = getPlanLabel(plan);
+        const dealname = `Breezy Premium – ${firstname || 'Customer'} (${planLabel})`;
+
+        const dealPayload = {
+          dealProperties: {
+            dealname,
+            amount: total.toFixed(2),
+            dealstage
+          },
+          contactId
+        };
+
+        statusEl.textContent = 'Creating subscription deal in HubSpot...';
+        statusEl.className = 'status loading';
+
+        const dealRes = await fetch('/api/deals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dealPayload)
+        });
+
+        if (!dealRes.ok) {
+          const errorBody = await dealRes.json().catch(() => ({}));
+          console.error('Error creating deal:', errorBody);
+          throw new Error('Deal creation failed with status ' + dealRes.status);
+        }
+
+        const createdDeal = await dealRes.json();
+        console.log('Created contact + deal:', createdContact, createdDeal);
+
+        statusEl.textContent = 'Contact and subscription deal created successfully.';
+        statusEl.className = 'status success';
+
+        // Refresh UI
+        await loadContacts();
+        await loadDealsForContact(contactId);
+
+        // Reset form + email styles
+        document.getElementById('unified-form').reset();
+        emailInput.classList.remove('input-error', 'input-success');
+        document.getElementById('u-email-error-text').textContent = '';
+        recalculateDealTotals(); // reset totals to default
+      } catch (err) {
+        console.error('Error in unified flow:', err);
+        statusEl.textContent = 'Error creating contact and deal. Please check the console or backend.';
+        statusEl.className = 'status error';
+      } finally {
+        submitButton.disabled = false;
+      }
+    }
+
+    // ---- Wire everything up ----
+    document.addEventListener('DOMContentLoaded', () => {
+      // Load contacts on page load
+      loadContacts();
+
+      // Unified form submission
+      const unifiedForm = document.getElementById('unified-form');
+      unifiedForm.addEventListener('submit', handleCreateCustomerAndDeal);
+
+      // Email validation (unified)
+      const emailInput = document.getElementById('u-email');
+      emailInput.addEventListener('input', validateEmailFieldUnified);
+      emailInput.addEventListener('blur', validateEmailFieldUnified);
+
+      // Subscription and hardware changes
+      const planSelect = document.getElementById('subscription-plan');
+      const includeThermostat = document.getElementById('include-thermostat');
+      const quantityInput = document.getElementById('thermostat-quantity');
+
+      planSelect.addEventListener('change', recalculateDealTotals);
+      includeThermostat.addEventListener('change', recalculateDealTotals);
+      quantityInput.addEventListener('input', recalculateDealTotals);
+
+      // Contact select for deals view
+      const contactSelect = document.getElementById('deal-contact-select');
+      contactSelect.addEventListener('change', () => {
+        const selectedId = contactSelect.value;
+        loadDealsForContact(selectedId);
+      });
+
+      // Initial calculation
+      recalculateDealTotals();
+    });
+  </script>
+</body>
+</html>
