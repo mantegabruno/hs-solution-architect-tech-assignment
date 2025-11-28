@@ -1,0 +1,1 @@
+# hs-solution-architect-tech-assignment
