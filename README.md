@@ -99,7 +99,7 @@ During installation, make sure this option is selected: “Add Git to PATH”
 After installation, restart your terminal (or restart your computer).
 
 Note: if running the command above you get this error on Mac:  
-![][https://44580685.fs1.hubspotusercontent-na1.net/hubfs/44580685/README/Screenshot%202025-11-28%20at%2012.10.08%20PM.png]  
+![](https://44580685.fs1.hubspotusercontent-na1.net/hubfs/44580685/README/Screenshot%202025-11-28%20at%2012.10.08%20PM.png)  
 Please proceed to install the developer tools.
 
 # **2 – Clone the starter repository**
@@ -113,7 +113,7 @@ On Mac: To select a folder in the macOS Terminal, use the `cd` (change directory
 On Windows: To select a folder in Windows CMD, use the `cd` (change directory) command followed by the folder name. For folders with spaces, enclose the name in double quotes, like `cd` "My Folder". You can also use `cd..` to go up one directory or `cd` / to navigate to the root of the current drive.
 
 That will look like this (example on Mac):  
-![][https://44580685.fs1.hubspotusercontent-na1.net/hubfs/44580685/README/image3.png]
+![](https://44580685.fs1.hubspotusercontent-na1.net/hubfs/44580685/README/image3.png)
 
 Run:
 
@@ -161,7 +161,7 @@ After selecting the scopes above, click on “Create app”. If you need more de
 ## 3.2 Create a custom property
 
 \- Access your portal’s Settings (gear icon), and navigate to Data Management on the left menu \> Properties  
-![][https://44580685.fs1.hubspotusercontent-na1.net/hubfs/44580685/README/image2.png]  
+![](https://44580685.fs1.hubspotusercontent-na1.net/hubfs/44580685/README/image2.png)  
 \- Under “Select an object”, select Deals;  
 \- Click on the “Create Property” button, then select “create manually”;  
 \- In the UI, fill the property label with a name, it can be “AI Summary”, for example, and make sure that the selected object type is Deals;  
@@ -239,7 +239,7 @@ If everything works, you should see something like:
 ```
 
 An illustrated example (this view could have slight differences, but make sure the “server is running successfully\!”):  
-![][https://44580685.fs1.hubspotusercontent-na1.net/hubfs/44580685/README/image1.png]
+![](https://44580685.fs1.hubspotusercontent-na1.net/hubfs/44580685/README/image1.png)
 
 Leave that Terminal open and running. That’s the backend functioning.
 
@@ -337,7 +337,7 @@ AI was extremely helpful in speeding up my progress and helping me understand ne
 
 1. ## Entity Relationship Diagram (ERD)
 
-![][https://44580685.fs1.hubspotusercontent-na1.net/hubfs/44580685/README/image5.png]  
+![](https://44580685.fs1.hubspotusercontent-na1.net/hubfs/44580685/README/image5.png)  
 The application developed here focuses mostly on the relationship between the Contact and the Deal (Subscription), with a mock version of adding “Line Items” (in the “subscription details” area in the UI’s form) \- the idea would be to completely integrate the hardware and subscription as line items for better revenue tracking.  
 I also added a possible improvement to the integration, to create a custom object (the thermostat) and a subscription (which would relate to the line item as I mentioned above). This could further centralize all their information in HubSpot, making it easier to manage all their data.
 
